@@ -49,7 +49,21 @@ class Sender:
         :param public_key: The sender's public key for key exchange.
         :return: None
         """
-        pass
+        self._sock.sendall(str(public_key).encode())
+
+        data = self._sock.recv(20480)
+        print(f'data received from the receiver {data}')
+
+        try:
+            pk_from_receiver = int(data)
+        except ValueError:
+            print('Invalid data type!')
+        else:
+            if self._df.verify_public_key(pk_from_receiver):
+                self._df.generate_shared_secret(pk_from_receiver)
+                print('I got the shared key:', self._df.shared_key)
+            else:
+                raise ValueError('Invalid public key from the sender!')
 
     def _derive_from_secret(self):
         """

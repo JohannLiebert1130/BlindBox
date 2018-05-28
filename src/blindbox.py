@@ -20,11 +20,11 @@ class BlindBox:
             encrypted_tokens = connection.recv(20480)
             print(encrypted_tokens)
 
-            self.check_tokens(encrypted_tokens)
+            # self.check_tokens(encrypted_tokens)
             # if check tokens do not raise any error or stop the connection,
             # the codes will continue executing.
 
-            self.forward_traffic(encrypted_data)
+            # self.forward_traffic(encrypted_data)
 
     def check_tokens(self, encrypted_tokens):
         """
@@ -35,10 +35,11 @@ class BlindBox:
         :param encrypted_tokens:
         :return:
         """
-        for encrypted_token in encrypted_tokens:
-            if encrypted_token in self.rule_tree:
-                # do something
-                pass
+        # for encrypted_token in encrypted_tokens:
+        #     if encrypted_token in self.rule_tree:
+        #         # do something
+        #         pass
+        pass
 
 
 if __name__ == '__main__':

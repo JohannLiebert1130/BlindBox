@@ -28,6 +28,26 @@ class Sender:
         self._k = None
         self._k_rand = None
 
+    def connection_setup(self):
+        while True:
+            # Wait for a connection
+            connection, address = self._sock.accept()
+
+            data = connection.recv(20480)
+            print(f'data received from the sender {address}: {data}')
+
+            try:
+                pk_from_sender = int(data)
+            except ValueError:
+                print('Invalid data type!')
+            else:
+                if self._df.verify_public_key(pk_from_sender):
+                    self._df.generate_shared_secret(pk_from_sender)
+                    print('I got the shared key:', self._df.shared_key)
+                    connection.sendall(str(self._df.public_key).encode())
+                else:
+                    raise ValueError('Invalid public key from the sender!')
+
     def _key_exchange(self, public_key):
         """
         After a key exchange using Diffie-Hellman algorithm,
@@ -71,8 +91,8 @@ class Sender:
         pass
 
 
-
 if __name__ == '__main__':
     sender = Sender()
+    sender.connection_setup()
 
 
