@@ -1,6 +1,7 @@
 import os
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
+import hashlib, binascii
 
 
 def aes_encrypt(data, key):
@@ -23,3 +24,8 @@ def aes_decrypt(data, key):
 def dpi_encrypt(data, key):
 
     return data
+
+
+def derive_key(password, salt, iterations=100000):
+    dk = hashlib.pbkdf2_hmac('sha256', password, salt, iterations)
+    return binascii.hexlify(dk)[:32]
