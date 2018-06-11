@@ -1,12 +1,12 @@
-import os
 import socket
 from time import sleep
-
+import nltk
 from diffiehellman.diffiehellman import DiffieHellman
-
-from src.utils import tokenize
-from src.crypto import aes_decrypt, aes_encrypt, dpi_encrypt
+from src.randoms import Randoms
+from src.crypto import aes_encrypt, dpi_encrypt, derive_key
 from src.blindbox import ADDRESS as BLINDBOX_ADDRESS
+
+nltk.download('punkt')
 
 
 class Sender:
@@ -14,12 +14,11 @@ class Sender:
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock_to_mb = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        self._df = DiffieHellman(key_length=2048)
+        self._df = DiffieHellman()
         self._df.generate_private_key()
         self._df.generate_public_key()
 
-        self._shared_secret = None
-        self._session_key = os.urandom(32)
+        self._session_key = None
         self._k = None
         self._k_rand = None
 
@@ -32,6 +31,8 @@ class Sender:
             print(f'Type error: {error}')
         else:
             self._key_exchange(self._df.public_key)
+            self._derive_from_secret()
+            print('session key', self._session_key)
 
         try:
             self._sock_to_mb.connect(BLINDBOX_ADDRESS)
@@ -49,7 +50,8 @@ class Sender:
         :param public_key: The sender's public key for key exchange.
         :return: None
         """
-        self._sock.sendall(str(public_key).encode())
+        key_to_bytes = str(public_key).encode()
+        self._sock.sendall(key_to_bytes)
 
         data = self._sock.recv(20480)
         print(f'data received from the receiver {data}')
@@ -67,17 +69,20 @@ class Sender:
 
     def _derive_from_secret(self):
         """
-        Use the shared secret to derive three keys by using a pseudorandom
+        Use the shared key to derive three keys by using a pseudorandom
         generator.
         _session_key: used to encrypt the traffic in the socket.
-        _k: used in our detection protocol
+        _k: used in the detection protocol
         _k_rand: used as a seed for randomness. Since both end-points have the same seed,
                  they will generate the same randomness.
         :return: None
         """
-        self._session_key = None
-        self._k = None
-        self._k_rand = None
+        key_to_bytes = str(self._df.shared_key).encode()
+
+        randoms = Randoms()
+        self._session_key = derive_key(key_to_bytes, randoms.random1)
+        self._k = derive_key(key_to_bytes, randoms.random2)
+        self._k_rand = derive_key(key_to_bytes, randoms.random3)
 
     def _secure_computation_with_mb(self):
         """
@@ -88,15 +93,16 @@ class Sender:
         pass
 
     def send(self, data):
-        encrypted_data = aes_encrypt(data, self._session_key)
+        encrypted_data = aes_encrypt(data.encode(), self._session_key)
 
         self._sock_to_mb.sendall(encrypted_data)
         sleep(0.4)
 
-        tokens = tokenize(data)
+        tokens = nltk.word_tokenize(data)
         encrypted_tokens = b''
         for token in tokens:
-            encrypted_tokens += dpi_encrypt(token, self._session_key)
+            encrypted_tokens += dpi_encrypt(token.encode(), self._session_key)
+            encrypted_tokens += b' '
 
         self._sock_to_mb.sendall(encrypted_tokens)
 
@@ -104,6 +110,4 @@ class Sender:
 if __name__ == '__main__':
     sender = Sender()
     sender.connect(('127.0.0.1', 7777))
-    sender.send(b'a secret message')
-
-
+    sender.send('a secret message')

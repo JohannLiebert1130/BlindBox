@@ -2,8 +2,8 @@ import socket
 
 from diffiehellman.diffiehellman import DiffieHellman
 
-from src.constants import RANDOM_1, RANDOM_2, RANDOM_3
-from src.crypto import aes_decrypt, aes_encrypt, dpi_encrypt, derive_key
+from src.randoms import Randoms
+from src.crypto import aes_decrypt, derive_key
 ADDRESS = ('127.0.0.1', 7777)
 
 
@@ -65,9 +65,11 @@ class Sender:
         :return: None
         """
         key_to_bytes = str(self._df.shared_key).encode()
-        self._session_key = derive_key(key_to_bytes, RANDOM_1)
-        self._k = derive_key(key_to_bytes, RANDOM_2)
-        self._k_rand = derive_key(key_to_bytes, RANDOM_3)
+
+        randoms = Randoms()
+        self._session_key = derive_key(key_to_bytes, randoms.random1)
+        self._k = derive_key(key_to_bytes, randoms.random2)
+        self._k_rand = derive_key(key_to_bytes, randoms.random3)
 
     def _secure_computation_with_mb(self):
         """
