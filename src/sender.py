@@ -7,13 +7,13 @@ from src.randoms import Randoms
 from src.crypto import aes_encrypt, dpi_encrypt, derive_key
 from src.blindbox import ADDRESS as BLINDBOX_ADDRESS
 from src.constants import OBLIVC_AES_PATH
-
+from src.receiver import ADDRESS as RECEIVER_ADDRESS
 nltk.download('punkt')
 
 
 class Sender:
     def __init__(self):
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._sock_to_receiver = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock_to_mb = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         self._df = DiffieHellman()
@@ -40,7 +40,7 @@ class Sender:
         :return:
         """
         try:
-            self._sock.connect(address)
+            self._sock_to_receiver.connect(address)
         except socket.error as error:
             print(f'Could not connect with the receiver: {error}')
             exit(1)
@@ -71,9 +71,9 @@ class Sender:
         :return: None
         """
         key_to_bytes = str(public_key).encode()
-        self._sock.sendall(key_to_bytes)
+        self._sock_to_receiver.sendall(key_to_bytes)
 
-        data = self._sock.recv(20480)
+        data = self._sock_to_receiver.recv(20480)
         print(f'data received from the receiver {data}')
 
         try:
@@ -133,5 +133,5 @@ class Sender:
 
 if __name__ == '__main__':
     sender = Sender()
-    sender.connect(('127.0.0.1', 7070))
+    sender.connect(RECEIVER_ADDRESS)
     sender.send('a secret message')
