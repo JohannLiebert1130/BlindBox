@@ -23,12 +23,28 @@ class Sender:
         self._k_rand = None
 
     def connect(self, address):
+        """
+        The sender(S) in this connect method will attempt to connect
+        to the receiver(R) by a regular sock connection. If the
+        connection is set up successfully, S and R will execute a key
+        exchange protocol then both of them will get a shared secret
+        key. After that three keys (a session key Kssl, a key K used in our
+        detection protocol, and a key Krand used as a seed) will be derived
+        from this secret key. Then, S will try to connect to the middle-
+        box by another regular sock connection. If the connection is
+        set up successfully, S will execute a secure computation with MB
+        so that MB can obtain rules encrypted with key K without knowing K.
+        :param address: the receiver's address
+        :return:
+        """
         try:
             self._sock.connect(address)
         except socket.error as error:
             print(f'Could not connect with the receiver: {error}')
+            exit(1)
         except TypeError as error:
             print(f'Type error: {error}')
+            exit(1)
         else:
             self._key_exchange(self._df.public_key)
             self._derive_from_secret()
@@ -38,8 +54,10 @@ class Sender:
             self._sock_to_mb.connect(BLINDBOX_ADDRESS)
         except socket.error as error:
             print(f'Could not connect with blindBox: {error}')
+            exit(1)
         except TypeError as error:
             print(f'Type error: {error}')
+            exit(1)
         else:
             self._secure_computation_with_mb()
 
