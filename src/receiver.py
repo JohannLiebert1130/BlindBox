@@ -1,13 +1,15 @@
 import socket
+import subprocess
 
 from diffiehellman.diffiehellman import DiffieHellman
-
+from src.blindbox import ADDRESS2 as BLINDBOX_ADDRESS
+from src.constants import OBLIVC_AES_PATH
 from src.randoms import Randoms
 from src.crypto import aes_decrypt, derive_key
-ADDRESS = ('127.0.0.1', 7777)
+ADDRESS = ('127.0.0.1', 7070)
 
 
-class Sender:
+class Receiver:
     def __init__(self):
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock_to_mb = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -31,6 +33,17 @@ class Sender:
             print('My shared key:', self._df.shared_key)
             self._derive_from_secret()
             print('session key', self._session_key)
+
+            try:
+                self._sock_to_mb.connect(BLINDBOX_ADDRESS)
+            except socket.error as error:
+                print(f'Could not connect with blindBox: {error}')
+                exit(1)
+            except TypeError as error:
+                print(f'Type error: {error}')
+                exit(1)
+            else:
+                self._rule_preparation()
 
     def _key_exchange(self, connection, public_key):
         """
@@ -71,13 +84,17 @@ class Sender:
         self._k = derive_key(key_to_bytes, randoms.random2)
         self._k_rand = derive_key(key_to_bytes, randoms.random3)
 
-    def _secure_computation_with_mb(self):
+    def _rule_preparation(self):
         """
         Sender will use garbled circuits to compute AES(r,k) with the BlindBox while
         the sender do not know the rule and the BlindBox do not know the key k.
         :return:
         """
-        pass
+        key_numbers = int(self._sock_to_mb.recv(1024))
+        for i in range(key_numbers):
+            output = subprocess.getoutput(OBLIVC_AES_PATH + "/a.out 5321 -- " + self._k.decode())
+            while output == "TCP accept failed":
+                output = subprocess.getoutput(OBLIVC_AES_PATH + "/a.out 5321 -- " + self._k.decode())
 
     def receive(self):
         encrypted_traffic = self._sock_to_mb.recv(20480)
@@ -92,7 +109,7 @@ class Sender:
 
 
 if __name__ == '__main__':
-    sender = Sender()
-    sender.connection_setup()
+    receiver = Receiver()
+    receiver.connection_setup()
 
 
