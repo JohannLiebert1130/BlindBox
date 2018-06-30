@@ -1,3 +1,4 @@
+import subprocess
 import socket
 from time import sleep
 import nltk
@@ -5,6 +6,7 @@ from diffiehellman.diffiehellman import DiffieHellman
 from src.randoms import Randoms
 from src.crypto import aes_encrypt, dpi_encrypt, derive_key
 from src.blindbox import ADDRESS as BLINDBOX_ADDRESS
+from src.constants import OBLIVC_AES_PATH
 
 nltk.download('punkt')
 
@@ -59,7 +61,7 @@ class Sender:
             print(f'Type error: {error}')
             exit(1)
         else:
-            self._secure_computation_with_mb()
+            self._rule_preparation()
 
     def _key_exchange(self, public_key):
         """
@@ -102,13 +104,17 @@ class Sender:
         self._k = derive_key(key_to_bytes, randoms.random2)
         self._k_rand = derive_key(key_to_bytes, randoms.random3)
 
-    def _secure_computation_with_mb(self):
+    def _rule_preparation(self):
         """
         Sender will use garbled circuits to compute AES(r,k) with the BlindBox while
         the sender do not know the rule and the BlindBox do not know the key k.
         :return:
         """
-        pass
+        key_numbers = int(self._sock_to_mb.recv(1024))
+        for i in range(key_numbers):
+            output = subprocess.getoutput(OBLIVC_AES_PATH + "/a.out 1235 -- " + self._k.decode())
+            while output == "TCP accept failed":
+                output = subprocess.getoutput(OBLIVC_AES_PATH + "/a.out 1235 -- " + self._k.decode())
 
     def send(self, data):
         encrypted_data = aes_encrypt(data.encode(), self._session_key)
@@ -127,5 +133,5 @@ class Sender:
 
 if __name__ == '__main__':
     sender = Sender()
-    sender.connect(('127.0.0.1', 7777))
+    sender.connect(('127.0.0.1', 7070))
     sender.send('a secret message')

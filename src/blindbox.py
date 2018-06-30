@@ -1,7 +1,10 @@
 import socket
+import subprocess
+from src.constants import OBLIVC_AES_PATH
 
-ADDRESS = ('127.0.0.1', 5050)
+ADDRESS = ('127.0.0.1', 6060)
 
+rules = ["attack", "violence", "fuck", "shit", "damn"]
 
 class BlindBox:
     def __init__(self):
@@ -14,7 +17,9 @@ class BlindBox:
             # Wait for a connection
             connection, address = self._sock.accept()
 
-            encrypted_data = connection.recv(1024)
+            self.rule_preparation(connection)
+
+            encrypted_data = connection.recv(20480)
             print(encrypted_data)
 
             encrypted_tokens = connection.recv(20480)
@@ -41,9 +46,17 @@ class BlindBox:
         #         pass
         pass
 
+    def rule_preparation(self, connection):
+        key_numbers = len(rules)
+        connection.sendall(str(key_numbers).encode())
+        for rule in rules:
+            output = subprocess.getoutput(OBLIVC_AES_PATH + "/a.out 1235 localhost " + rule)
+            while output == "TCP connect failed":
+                output = subprocess.getoutput(OBLIVC_AES_PATH + "/a.out 1235 localhost " + rule)
+
+            print(output)
+
 
 if __name__ == '__main__':
     bd = BlindBox()
     bd.detect()
-
-
